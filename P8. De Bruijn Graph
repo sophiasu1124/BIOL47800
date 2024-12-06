@@ -1,0 +1,99 @@
+import random
+import matplotlib.pyplot as plt
+import networkx as nx
+
+# Utility Functions
+def generate_random_dna(length, letter_freqs):
+    """Generate a random DNA sequence given nucleotide frequencies."""
+    nucleotides = ''.join([letter * int(freq * 1000) for letter, freq in letter_freqs.items()])
+    return ''.join(random.choices(nucleotides, k=length))
+
+def add_repeats(sequence, repeat_length, num_repeats):
+    """Add repetitive sequences to a DNA string."""
+    repeats = [sequence[i:i+repeat_length] for i in range(0, len(sequence) - repeat_length + 1, repeat_length)]
+    repeats = random.choices(repeats, k=num_repeats)
+    return sequence + ''.join(repeats)
+
+def generate_reads(sequence, read_length, coverage, error_rate):
+    """Simulate reads with a given coverage and error rate."""
+    num_reads = int(coverage * len(sequence) / read_length)
+    reads = []
+    for _ in range(num_reads):
+        start = random.randint(0, len(sequence) - read_length)
+        read = sequence[start:start+read_length]
+        read = ''.join(base if random.random() > error_rate else random.choice('ACGT') for base in read)
+        reads.append(read)
+    return reads
+
+def generate_kmers(reads, k):
+    """Generate k-mers from the reads."""
+    kmers = []
+    for read in reads:
+        kmers.extend([read[i:i+k] for i in range(len(read) - k + 1)])
+    return kmers
+
+def construct_de_bruijn_graph(kmers):
+    """Construct a De Bruijn graph from k-mers."""
+    graph = nx.DiGraph()
+    for kmer in kmers:
+        prefix = kmer[:-1]
+        suffix = kmer[1:]
+        graph.add_edge(prefix, suffix)
+    return graph
+
+def trace_contigs(graph):
+    """Trace contigs from a De Bruijn graph."""
+    contigs = []
+    for node in graph.nodes:
+        if graph.in_degree(node) != 1 or graph.out_degree(node) != 1:
+            for successor in graph.successors(node):
+                contig = node
+                current = successor
+                while graph.in_degree(current) == 1 and graph.out_degree(current) == 1:
+                    contig += current[-1]
+                    current = next(graph.successors(current))
+                contigs.append(contig)
+    return contigs
+
+# DNA Simulation Parameters
+letter_freqs = {'A': 0.3, 'C': 0.2, 'G': 0.2, 'T': 0.3}
+length = 1000
+repeat_length = 10
+num_repeats = 5
+
+# Read Simulation Parameters
+read_length = 50
+coverage = 10
+error_rate = 0.01
+
+# k-mer and Graph Parameters
+kmer_length = 15
+
+# Generate random DNA sequence and add repeats
+sequence = generate_random_dna(length, letter_freqs)
+sequence_with_repeats = add_repeats(sequence, repeat_length, num_repeats)
+
+# Simulate reads and generate k-mers
+reads = generate_reads(sequence_with_repeats, read_length, coverage, error_rate)
+kmers = generate_kmers(reads, kmer_length)
+
+# Construct De Bruijn graph and trace contigs
+graph = construct_de_bruijn_graph(kmers)
+contigs = trace_contigs(graph)
+
+# Visualization
+def plot_graph(graph):
+    """Plot the De Bruijn graph."""
+    plt.figure(figsize=(12, 8))
+    pos = nx.spring_layout(graph)
+    nx.draw(graph, pos, with_labels=True, node_size=500, font_size=10, font_weight="bold")
+    plt.title("De Bruijn Graph")
+    plt.show()
+
+# Plot the graph
+plot_graph(graph)
+
+# Print Results
+print("Generated Contigs:")
+for contig in contigs:
+    print(contig)
