@@ -4,12 +4,12 @@ import networkx as nx
 
 # Utility Functions
 def generate_random_dna(length, letter_freqs):
-    """Generate a random DNA sequence given nucleotide frequencies."""
+    """Generate a random DNA text"""
     nucleotides = ''.join([letter * int(freq * 1000) for letter, freq in letter_freqs.items()])
     return ''.join(random.choices(nucleotides, k=length))
 
 def add_repeats(sequence, repeat_length, num_repeats):
-    """Add repetitive sequences to a DNA string."""
+    """Add repetitive sequences to DNA text."""
     repeats = [sequence[i:i+repeat_length] for i in range(0, len(sequence) - repeat_length + 1, repeat_length)]
     repeats = random.choices(repeats, k=num_repeats)
     return sequence + ''.join(repeats)
@@ -26,14 +26,14 @@ def generate_reads(sequence, read_length, coverage, error_rate):
     return reads
 
 def generate_kmers(reads, k):
-    """Generate k-mers from the reads."""
+    """Generate k-mers from the reads"""
     kmers = []
     for read in reads:
         kmers.extend([read[i:i+k] for i in range(len(read) - k + 1)])
     return kmers
 
 def construct_de_bruijn_graph(kmers):
-    """Construct a De Bruijn graph from k-mers."""
+    """Construct a De Bruijn graph from k-mers"""
     graph = nx.DiGraph()
     for kmer in kmers:
         prefix = kmer[:-1]
@@ -42,7 +42,7 @@ def construct_de_bruijn_graph(kmers):
     return graph
 
 def trace_contigs(graph):
-    """Trace contigs from a De Bruijn graph."""
+    """Trace contigs from a De Bruijn graph"""
     contigs = []
     for node in graph.nodes:
         if graph.in_degree(node) != 1 or graph.out_degree(node) != 1:
@@ -57,12 +57,12 @@ def trace_contigs(graph):
 
 # DNA Simulation Parameters
 letter_freqs = {'A': 0.3, 'C': 0.2, 'G': 0.2, 'T': 0.3}
-length = 1000
+genome_size = 1000  # Genome size (G)
 repeat_length = 10
 num_repeats = 5
 
 # Read Simulation Parameters
-read_length = 50
+read_length = 50  # Sequence length (L)
 coverage = 10
 error_rate = 0.01
 
@@ -70,16 +70,25 @@ error_rate = 0.01
 kmer_length = 15
 
 # Generate random DNA sequence and add repeats
-sequence = generate_random_dna(length, letter_freqs)
+sequence = generate_random_dna(genome_size, letter_freqs)
 sequence_with_repeats = add_repeats(sequence, repeat_length, num_repeats)
 
 # Simulate reads and generate k-mers
 reads = generate_reads(sequence_with_repeats, read_length, coverage, error_rate)
+num_sequences = len(reads)  # Number of sequences (N)
 kmers = generate_kmers(reads, kmer_length)
 
 # Construct De Bruijn graph and trace contigs
 graph = construct_de_bruijn_graph(kmers)
 contigs = trace_contigs(graph)
+
+# Calculate coverage using the Lander-Waterman equation
+calculated_coverage = (read_length * num_sequences) / genome_size
+
+# Predict the number of contigs using the Lander-Waterman equation
+# Predicted number of contigs is approximated as genome_size * (1 - exp(-calculated_coverage))
+import math
+predicted_contigs = genome_size * (1 - math.exp(-calculated_coverage))
 
 # Visualization
 def plot_graph(graph):
@@ -97,3 +106,9 @@ plot_graph(graph)
 print("Generated Contigs:")
 for contig in contigs:
     print(contig)
+
+# Calculate and print the number of contigs
+num_contigs = len(contigs)
+print(f"\nNumber of Contigs (from graph): {num_contigs}")
+print(f"Calculated Coverage (Lander-Waterman): {calculated_coverage:.2f}")
+print(f"Predicted Number of Contigs (Lander-Waterman): {predicted_contigs:.2f}")
